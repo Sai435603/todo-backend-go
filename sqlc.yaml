@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "db/queries"
+    schema: "db/migrations"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/database/sqlc"
+        sql_package: "pgx/v5" #genetate code pgx compatible
+        emit_json_tags: true  #add json tags to the generated structs
+        emit_interface: true  #generate interface for the generated structs for testing
+        emit_empty_slices: true #emit empty slices for the generated structs instead of nils
