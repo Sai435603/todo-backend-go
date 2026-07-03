@@ -20,7 +20,7 @@ func Register(r chi.Router, h *handler.Handler) {
 	staticDir := "static"
 	fileServer := http.FileServer(http.Dir(staticDir))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path == "" {
 			path = "index.html"

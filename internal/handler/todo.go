@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Sai435603/todo-backend-go/internal/response"
+	"github.com/Sai435603/todo-backend-go/internal/validator"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -28,6 +29,12 @@ func (h *Handler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		_ = response.Error(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	if errs := validator.ValidateCreateTodo(req.Title, req.Description); errs != nil {
+		_ = response.ValidationError(w, errs)
+		return
+	}
+
 	todo, err := h.service.CreateTodo(r.Context(), req.Title, req.Description)
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, err.Error())
@@ -51,6 +58,12 @@ func (h *Handler) GetTodo(w http.ResponseWriter, r *http.Request) {
 		_ = response.Error(w, http.StatusBadRequest, "invalid id")
 		return
 	}
+
+	if errs := validator.ValidateID(id); errs != nil {
+		_ = response.ValidationError(w, errs)
+		return
+	}
+
 	todo, err := h.service.GetTodo(r.Context(), id)
 	if err != nil {
 		_ = response.Error(w, http.StatusNotFound, err.Error())
@@ -62,13 +75,21 @@ func (h *Handler) GetTodo(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
+		_ = response.Error(w, http.StatusBadRequest, "invalid id")
 		return
 	}
+
 	var req UpdateTodoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		_ = response.Error(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	if errs := validator.ValidateUpdateTodo(id, req.Title, req.Description); errs != nil {
+		_ = response.ValidationError(w, errs)
+		return
+	}
+
 	todo, err := h.service.UpdateTodo(r.Context(), id, req.Title, req.Description, req.Completed)
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, err.Error())
@@ -80,8 +101,15 @@ func (h *Handler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
+		_ = response.Error(w, http.StatusBadRequest, "invalid id")
 		return
 	}
+
+	if errs := validator.ValidateID(id); errs != nil {
+		_ = response.ValidationError(w, errs)
+		return
+	}
+
 	if err := h.service.DeleteTodo(r.Context(), id); err != nil {
 		_ = response.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -108,7 +136,17 @@ func (h *Handler) GetPendingTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) MarkTodoCompleted(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		_ = response.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	if errs := validator.ValidateID(id); errs != nil {
+		_ = response.ValidationError(w, errs)
+		return
+	}
+
 	todo, err := h.service.MarkTodoCompleted(r.Context(), id)
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, err.Error())
@@ -118,7 +156,17 @@ func (h *Handler) MarkTodoCompleted(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) MarkTodoPending(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		_ = response.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	if errs := validator.ValidateID(id); errs != nil {
+		_ = response.ValidationError(w, errs)
+		return
+	}
+
 	todo, err := h.service.MarkTodoPending(r.Context(), id)
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, err.Error())
@@ -128,7 +176,14 @@ func (h *Handler) MarkTodoPending(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SearchTodos(w http.ResponseWriter, r *http.Request) {
-	todos, err := h.service.SearchTodos(r.Context(), r.URL.Query().Get("q"))
+	query := r.URL.Query().Get("q")
+
+	if errs := validator.ValidateSearchQuery(query); errs != nil {
+		_ = response.ValidationError(w, errs)
+		return
+	}
+
+	todos, err := h.service.SearchTodos(r.Context(), query)
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, err.Error())
 		return

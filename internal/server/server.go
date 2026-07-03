@@ -1,12 +1,14 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
 
 	"github.com/Sai435603/todo-backend-go/internal/app"
 	"github.com/Sai435603/todo-backend-go/internal/handler"
+	custommw "github.com/Sai435603/todo-backend-go/internal/middleware"
 	routes "github.com/Sai435603/todo-backend-go/internal/router"
 
 	"github.com/go-chi/chi/v5"
@@ -20,9 +22,20 @@ type Server struct {
 
 func New(app *app.Application, h *handler.Handler) *Server {
 	r := chi.NewRouter()
+
+	// --- Chi built-in middlewares ---
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
+
+	// --- Custom middlewares ---
+	r.Use(custommw.RequestLogger(app.Logger))
+	r.Use(custommw.CORS("*"))
+	r.Use(custommw.SecurityHeaders)
+	r.Use(custommw.ContentType)
+	r.Use(custommw.RateLimiter(100, 200)) // 100 req/s per IP, burst of 200
+	r.Use(custommw.Timeout(30 * time.Second))
+
 	routes.Register(r, h)
 
 	srv := &http.Server{
@@ -53,4 +66,8 @@ func (s *Server) Start() error {
 	}
 
 	return nil
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
