@@ -1,31 +1,36 @@
+<!-- UI is made with AI you can edit -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo App</title>
-    <meta name="description" content="A sleek dark-themed todo application built with Go">
+    <title>todo — terminal</title>
+    <meta name="description" content="A terminal-style todo application built with Go">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Animated background particles -->
-    <canvas id="particles-canvas"></canvas>
+    <!-- Scanline overlay -->
+    <div id="scanline-overlay"></div>
 
     <div class="app-container">
+        <!-- Terminal Title Bar -->
+        <div class="terminal-titlebar">
+            <div class="titlebar-dots">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+            </div>
+            <span class="titlebar-text">todo@localhost:~</span>
+            <div class="titlebar-spacer"></div>
+        </div>
+
         <!-- Header -->
         <header class="app-header">
             <div class="logo-section">
-                <div class="logo-icon">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                        <path d="M2 17l10 5 10-5"/>
-                        <path d="M2 12l10 5 10-5"/>
-                    </svg>
-                </div>
-                <h1>Taskflow</h1>
+                <h1><span class="prompt">$</span> taskflow</h1>
             </div>
             <div class="header-stats">
                 <div class="stat" id="stat-total">
@@ -51,7 +56,7 @@
                         <input 
                             type="text" 
                             id="todo-title" 
-                            placeholder="What needs to be done?" 
+                            placeholder="> enter task..." 
                             autocomplete="off"
                             required
                         >
@@ -65,7 +70,7 @@
                     </div>
                     <textarea 
                         id="todo-description" 
-                        placeholder="Add a description (optional)"
+                        placeholder="# description (optional)"
                         rows="1"
                     ></textarea>
                 </div>
@@ -84,7 +89,7 @@
                     <circle cx="11" cy="11" r="8"/>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="text" id="search-input" placeholder="Search todos...">
+                <input type="text" id="search-input" placeholder="grep ...">
             </div>
         </section>
 
@@ -103,12 +108,12 @@
                         <polyline points="10 9 9 9 8 9"/>
                     </svg>
                 </div>
-                <p class="empty-title">No tasks yet</p>
-                <p class="empty-subtitle">Add your first task above to get started</p>
+                <p class="empty-title">// no tasks found</p>
+                <p class="empty-subtitle">run <span class="cmd-highlight">> add</span> to create your first entry</p>
             </div>
             <div id="loading-state" class="loading-state">
                 <div class="spinner"></div>
-                <p>Loading tasks...</p>
+                <p>fetching tasks...</p>
             </div>
         </section>
     </div>

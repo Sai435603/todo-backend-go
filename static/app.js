@@ -73,85 +73,10 @@ const toastContainer = $('#toast-container');
 
 
 // =============================================
-// PARTICLE BACKGROUND
+// TERMINAL EFFECTS
 // =============================================
-function initParticles() {
-    const canvas = $('#particles-canvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    let animFrame;
-
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    class Particle {
-        constructor() {
-            this.reset();
-        }
-        reset() {
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * canvas.height;
-            this.size = Math.random() * 1.8 + 0.4;
-            this.speedX = (Math.random() - 0.5) * 0.3;
-            this.speedY = (Math.random() - 0.5) * 0.3;
-            this.opacity = Math.random() * 0.35 + 0.1;
-            this.pulse = Math.random() * Math.PI * 2;
-            this.pulseSpeed = Math.random() * 0.015 + 0.005;
-        }
-        update() {
-            this.x += this.speedX;
-            this.y += this.speedY;
-            this.pulse += this.pulseSpeed;
-
-            if (this.x < -10 || this.x > canvas.width + 10 ||
-                this.y < -10 || this.y > canvas.height + 10) {
-                this.reset();
-            }
-        }
-        draw() {
-            const alpha = this.opacity * (0.6 + 0.4 * Math.sin(this.pulse));
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(167, 139, 250, ${alpha})`;
-            ctx.fill();
-        }
-    }
-
-    const count = Math.min(80, Math.floor((canvas.width * canvas.height) / 15000));
-    for (let i = 0; i < count; i++) {
-        particles.push(new Particle());
-    }
-
-    function drawLines() {
-        for (let i = 0; i < particles.length; i++) {
-            for (let j = i + 1; j < particles.length; j++) {
-                const dx = particles[i].x - particles[j].x;
-                const dy = particles[i].y - particles[j].y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 120) {
-                    const alpha = (1 - dist / 120) * 0.08;
-                    ctx.beginPath();
-                    ctx.moveTo(particles[i].x, particles[i].y);
-                    ctx.lineTo(particles[j].x, particles[j].y);
-                    ctx.strokeStyle = `rgba(167, 139, 250, ${alpha})`;
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
-                }
-            }
-        }
-    }
-
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => { p.update(); p.draw(); });
-        drawLines();
-        animFrame = requestAnimationFrame(animate);
-    }
-    animate();
+function initTerminalEffects() {
+    // Nothing heavy — the CSS handles scanlines and cursor blink
 }
 
 
@@ -176,37 +101,24 @@ function createTodoHTML(todo, index) {
     const desc = todo.description?.String || todo.description || '';
     const date = todo.created_at?.Time || todo.created_at || '';
     const formattedDate = date ? formatDate(date) : '';
+    const checkbox = isCompleted ? '[x]' : '[ ]';
 
     return `
-        <div class="todo-item ${isCompleted ? 'completed' : ''}" data-id="${todo.id}" style="animation-delay: ${index * 0.05}s">
+        <div class="todo-item ${isCompleted ? 'completed' : ''}" data-id="${todo.id}" style="animation-delay: ${index * 0.04}s">
             <div class="todo-checkbox ${isCompleted ? 'checked' : ''}" onclick="toggleTodo(${todo.id}, ${isCompleted})">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                <span class="checkbox-text">${checkbox}</span>
             </div>
             <div class="todo-content">
-                <div class="todo-title">${escapeHtml(todo.title)}</div>
-                ${desc ? `<div class="todo-description">${escapeHtml(desc)}</div>` : ''}
+                <div class="todo-title"><span class="line-prefix">&gt;</span> ${escapeHtml(todo.title)}</div>
+                ${desc ? `<div class="todo-description"><span class="comment-prefix">#</span> ${escapeHtml(desc)}</div>` : ''}
                 <div class="todo-meta">
                     ${formattedDate ? `<span class="todo-date">${formattedDate}</span>` : ''}
-                    <span class="todo-badge ${isCompleted ? 'done' : 'pending'}">${isCompleted ? 'Done' : 'Pending'}</span>
+                    <span class="todo-badge ${isCompleted ? 'done' : 'pending'}">${isCompleted ? 'DONE' : 'PENDING'}</span>
                 </div>
             </div>
             <div class="todo-actions">
-                <button class="action-btn" onclick="openEditModal(${todo.id})" title="Edit">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                </button>
-                <button class="action-btn delete" onclick="deleteTodo(${todo.id})" title="Delete">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                        <line x1="10" y1="11" x2="10" y2="17"/>
-                        <line x1="14" y1="11" x2="14" y2="17"/>
-                    </svg>
-                </button>
+                <button class="action-btn" onclick="openEditModal(${todo.id})" title="Edit">[edit]</button>
+                <button class="action-btn delete" onclick="deleteTodo(${todo.id})" title="Delete">[rm]</button>
             </div>
         </div>
     `;
@@ -501,6 +413,6 @@ function formatDate(dateStr) {
 // INIT
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    initParticles();
+    initTerminalEffects();
     loadTodos();
 });
