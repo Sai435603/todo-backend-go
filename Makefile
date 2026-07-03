@@ -10,4 +10,6 @@ migrate-down:
 
 migrate-version:
 	migrate -path db/migrations -database "$(DB_URL)" version
- 
+
+todo:
+	go run ./cmd/api

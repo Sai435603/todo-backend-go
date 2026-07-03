@@ -23,7 +23,6 @@ func New(app *app.Application, h *handler.Handler) *Server {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-
 	routes.Register(r, h)
 
 	srv := &http.Server{
