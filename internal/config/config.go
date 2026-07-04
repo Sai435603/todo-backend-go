@@ -5,11 +5,22 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 type Config struct {
-	App AppConfig
-	DB  DBConfig
+	App               AppConfig
+	DB                DBConfig
+	GoogleOauthConfig *oauth2.Config
+	Cookie            CookieConfig
+}
+
+type CookieConfig struct {
+	Name     string
+	Secure   bool
+	Domain   string
+	HttpOnly bool
 }
 
 type AppConfig struct {
@@ -43,6 +54,19 @@ func Load() (*Config, error) {
 			Password: getEnv("DB_PASSWORD", ""),
 			Name:     getEnv("DB_NAME", "todo_app"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		},
+		GoogleOauthConfig: &oauth2.Config{
+			ClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+			ClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+			RedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/google/callback"),
+			Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+			Endpoint:     google.Endpoint,
+		},
+		Cookie: CookieConfig{
+			Name:     getEnv("COOKIE_NAME", "session_id"),
+			Secure:   getEnv("COOKIE_SECURE", "true") == "true",
+			Domain:   getEnv("COOKIE_DOMAIN", "localhost"),
+			HttpOnly: getEnv("COOKIE_HTTPONLY", "true") == "true",
 		},
 	}, nil
 }
