@@ -9,6 +9,13 @@ const api = {
         if (body) opts.body = JSON.stringify(body);
 
         const res = await fetch(`${API_BASE}${path}`, opts);
+
+        // Handle 401 — redirect to auth
+        if (res.status === 401) {
+            showAuthGate();
+            throw new Error('Authentication required');
+        }
+
         const data = await res.json();
 
         if (!data.success) {
@@ -43,6 +50,7 @@ const api = {
 let allTodos = [];
 let currentFilter = 'all';
 let searchDebounceTimer = null;
+let currentUser = null;
 
 
 // =============================================
@@ -51,25 +59,80 @@ let searchDebounceTimer = null;
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-const todoList       = $('#todo-list');
-const emptyState     = $('#empty-state');
-const loadingState   = $('#loading-state');
-const addForm        = $('#add-todo-form');
-const titleInput     = $('#todo-title');
-const descInput      = $('#todo-description');
-const searchInput    = $('#search-input');
-const editModal      = $('#edit-modal');
-const editForm       = $('#edit-form');
-const editId         = $('#edit-id');
-const editTitle      = $('#edit-title');
-const editDesc       = $('#edit-description');
-const editCompleted  = $('#edit-completed');
-const modalCloseBtn  = $('#modal-close');
+const authGate      = $('#auth-gate');
+const mainApp       = $('#main-app');
+const userInfoEl    = $('#user-info');
+const userNameEl    = $('#user-name');
+const logoutBtn     = $('#logout-btn');
+const todoList      = $('#todo-list');
+const emptyState    = $('#empty-state');
+const loadingState  = $('#loading-state');
+const addForm       = $('#add-todo-form');
+const titleInput    = $('#todo-title');
+const descInput     = $('#todo-description');
+const searchInput   = $('#search-input');
+const editModal     = $('#edit-modal');
+const editForm      = $('#edit-form');
+const editId        = $('#edit-id');
+const editTitle     = $('#edit-title');
+const editDesc      = $('#edit-description');
+const editCompleted = $('#edit-completed');
+const modalCloseBtn = $('#modal-close');
 const modalCancelBtn = $('#modal-cancel');
-const statTotal      = $('#stat-total .stat-number');
-const statPending    = $('#stat-pending .stat-number');
-const statCompleted  = $('#stat-completed .stat-number');
+const statTotal     = $('#stat-total .stat-number');
+const statPending   = $('#stat-pending .stat-number');
+const statCompleted = $('#stat-completed .stat-number');
 const toastContainer = $('#toast-container');
+
+
+// =============================================
+// AUTH
+// =============================================
+async function checkAuth() {
+    try {
+        const res = await fetch('/auth/me');
+        if (!res.ok) {
+            showAuthGate();
+            return;
+        }
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+            currentUser = data.user;
+            showMainApp();
+        } else {
+            showAuthGate();
+        }
+    } catch {
+        showAuthGate();
+    }
+}
+
+function showAuthGate() {
+    authGate.classList.remove('hidden');
+    mainApp.classList.add('hidden');
+    userInfoEl.classList.add('hidden');
+}
+
+function showMainApp() {
+    authGate.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    userInfoEl.classList.remove('hidden');
+    if (currentUser) {
+        userNameEl.textContent = currentUser.name || currentUser.email;
+    }
+    loadTodos();
+}
+
+async function logout() {
+    try {
+        await fetch('/auth/logout', { method: 'POST' });
+    } catch {
+        // ignore
+    }
+    currentUser = null;
+    allTodos = [];
+    showAuthGate();
+}
 
 
 // =============================================
@@ -171,7 +234,9 @@ async function loadTodos() {
         applyFilter();
     } catch (err) {
         loadingState.classList.add('hidden');
-        showToast('Failed to load todos', 'error');
+        if (err.message !== 'Authentication required') {
+            showToast('Failed to load todos', 'error');
+        }
         console.error(err);
     }
 }
@@ -253,6 +318,9 @@ function closeEditModal() {
 // =============================================
 // EVENT LISTENERS
 // =============================================
+
+// Logout
+logoutBtn.addEventListener('click', logout);
 
 // Add todo
 addForm.addEventListener('submit', async (e) => {
@@ -414,5 +482,5 @@ function formatDate(dateStr) {
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
     initTerminalEffects();
-    loadTodos();
+    checkAuth();
 });

@@ -1,14 +1,14 @@
 -- name: GetTodos :many
 SELECT *
-FROM todos
+FROM todos WHERE user_id = $1
 ORDER BY created_at DESC;
 
 -- name: GetTodoById :one
 SELECT * FROM todos WHERE id = $1;
 
 -- name: CreateTodo :one
-INSERT INTO todos (title, description, completed)
-VALUES ($1, $2, $3)
+INSERT INTO todos (title, description, completed, user_id)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: UpdateTodo :one
@@ -21,10 +21,10 @@ RETURNING *;
 DELETE FROM todos WHERE id = $1;
 
 -- name: GetCompletedTodos :many
-SELECT * FROM todos WHERE completed = true;
+SELECT * FROM todos WHERE completed = true AND user_id = $1;
 
 -- name: GetPendingTodos :many
-SELECT * FROM todos WHERE completed = false;
+SELECT * FROM todos WHERE completed = false AND user_id = $1;
 
 -- name: MarkTodoAsCompleted :one
 UPDATE todos 
@@ -40,8 +40,8 @@ RETURNING *;
 
 -- name: SearchTodos :many
 SELECT * FROM todos
-WHERE title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%';
+WHERE user_id = $1 AND (title ILIKE '%' || $2 || '%' OR description ILIKE '%' || $2 || '%');
 
 -- name: GetTodosByDateRange :many
 SELECT * FROM todos
-WHERE created_at BETWEEN $1 AND $2;
+WHERE user_id = $1 AND created_at BETWEEN $2 AND $3;

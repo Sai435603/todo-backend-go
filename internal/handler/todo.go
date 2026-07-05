@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Sai435603/todo-backend-go/internal/middleware"
 	"github.com/Sai435603/todo-backend-go/internal/response"
 	"github.com/Sai435603/todo-backend-go/internal/validator"
 	"github.com/go-chi/chi/v5"
@@ -24,6 +25,8 @@ type UpdateTodoRequest struct {
 }
 
 func (h *Handler) CreateTodo(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+
 	var req CreateTodoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		_ = response.Error(w, http.StatusBadRequest, "invalid request body")
@@ -35,7 +38,7 @@ func (h *Handler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todo, err := h.service.CreateTodo(r.Context(), req.Title, req.Description)
+	todo, err := h.service.CreateTodo(r.Context(), req.Title, req.Description, userID)
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, err.Error())
 		return
@@ -44,7 +47,9 @@ func (h *Handler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTodos(w http.ResponseWriter, r *http.Request) {
-	todos, err := h.service.GetTodos(r.Context())
+	userID := middleware.GetUserID(r.Context())
+
+	todos, err := h.service.GetTodos(r.Context(), userID)
 	if err != nil {
 		_ = response.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -118,7 +123,9 @@ func (h *Handler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetCompletedTodos(w http.ResponseWriter, r *http.Request) {
-	todos, err := h.service.GetCompletedTodos(r.Context())
+	userID := middleware.GetUserID(r.Context())
+
+	todos, err := h.service.GetCompletedTodos(r.Context(), userID)
 	if err != nil {
 		_ = response.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -127,7 +134,9 @@ func (h *Handler) GetCompletedTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetPendingTodos(w http.ResponseWriter, r *http.Request) {
-	todos, err := h.service.GetPendingTodos(r.Context())
+	userID := middleware.GetUserID(r.Context())
+
+	todos, err := h.service.GetPendingTodos(r.Context(), userID)
 	if err != nil {
 		_ = response.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -176,6 +185,7 @@ func (h *Handler) MarkTodoPending(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SearchTodos(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
 	query := r.URL.Query().Get("q")
 
 	if errs := validator.ValidateSearchQuery(query); errs != nil {
@@ -183,7 +193,7 @@ func (h *Handler) SearchTodos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todos, err := h.service.SearchTodos(r.Context(), query)
+	todos, err := h.service.SearchTodos(r.Context(), query, userID)
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, err.Error())
 		return
@@ -192,6 +202,8 @@ func (h *Handler) SearchTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTodosByDateRange(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+
 	from, err := time.Parse(time.RFC3339, r.URL.Query().Get("from"))
 	if err != nil {
 		_ = response.Error(w, http.StatusBadRequest, "invalid from")
@@ -202,7 +214,7 @@ func (h *Handler) GetTodosByDateRange(w http.ResponseWriter, r *http.Request) {
 		_ = response.Error(w, http.StatusBadRequest, "invalid to")
 		return
 	}
-	res, err := h.service.GetTodosByDateRange(r.Context(), pgtype.Timestamp{Time: from, Valid: true}, pgtype.Timestamp{Time: to, Valid: true})
+	res, err := h.service.GetTodosByDateRange(r.Context(), userID, pgtype.Timestamp{Time: from, Valid: true}, pgtype.Timestamp{Time: to, Valid: true})
 	if err != nil {
 		_ = response.Error(w, http.StatusInternalServerError, err.Error())
 		return

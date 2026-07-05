@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Sai435603/todo-backend-go/internal/auth"
 	"github.com/Sai435603/todo-backend-go/internal/config"
+	"github.com/Sai435603/todo-backend-go/internal/database/sqlc"
 	"github.com/Sai435603/todo-backend-go/internal/validator"
 	"golang.org/x/oauth2"
 )
@@ -15,6 +17,8 @@ import (
 type AuthHandler struct {
 	AuthConfig *oauth2.Config
 	Cookie     config.CookieConfig
+	JWTSecret  string
+	Queries    *sqlc.Queries
 }
 
 func (h *AuthHandler) HandleOAuthLogin(w http.ResponseWriter, r *http.Request) {
@@ -56,17 +60,91 @@ func (h *AuthHandler) OAuthCallbackHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "Google returned an invalid status code", http.StatusInternalServerError)
-		return
+
+	var userInfo struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
 	}
-	var userInfo map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		http.Error(w, "Failed to parse user profile", http.StatusInternalServerError)
 		return
 	}
-	// fmt.Printf("\n\n\n\n")
-	// fmt.Println(userInfo)
-	// fmt.Printf("\n\n\n\n")
+
+	// Upsert user into database
+	dbUser, err := h.Queries.UpsertUser(r.Context(), sqlc.UpsertUserParams{
+		GoogleID: userInfo.ID,
+		Email:    userInfo.Email,
+		Name:     userInfo.Name,
+	})
+	if err != nil {
+		fmt.Println("Failed to upsert user:", err)
+		http.Error(w, "Failed to save user", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate local JWT
+	jwtToken, err := auth.GenerateJWT(dbUser.ID, dbUser.Email, dbUser.Name, h.JWTSecret)
+	if err != nil {
+		http.Error(w, "Failed to generate session token", http.StatusInternalServerError)
+		return
+	}
+
+	// Set JWT as HTTP-only cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    jwtToken,
+		Path:     "/",
+		MaxAge:   int((24 * time.Hour).Seconds()),
+		HttpOnly: true,
+		Secure:   h.Cookie.Secure,
+		Domain:   h.Cookie.Domain,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+// HandleAuthCheck returns the current user info if authenticated, or 401 if not.
+func (h *AuthHandler) HandleAuthCheck(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("auth_token")
+	if err != nil {
+		http.Error(w, `{"authenticated":false}`, http.StatusUnauthorized)
+		return
+	}
+
+	claims, err := auth.ParseJWT(cookie.Value, h.JWTSecret)
+	if err != nil {
+		http.Error(w, `{"authenticated":false}`, http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]any{
+		"authenticated": true,
+		"user": map[string]any{
+			"id":    claims.UserID,
+			"email": claims.Email,
+			"name":  claims.Name,
+		},
+	})
+}
+
+// HandleLogout clears the auth_token cookie.
+func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   h.Cookie.Secure,
+		Domain:   h.Cookie.Domain,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "logged out"})
 }

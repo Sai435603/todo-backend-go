@@ -12,19 +12,25 @@ import (
 )
 
 const createTodo = `-- name: CreateTodo :one
-INSERT INTO todos (title, description, completed)
-VALUES ($1, $2, $3)
-RETURNING id, title, description, completed, created_at, updated_at
+INSERT INTO todos (title, description, completed, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
 type CreateTodoParams struct {
 	Title       string      `json:"title"`
 	Description pgtype.Text `json:"description"`
 	Completed   pgtype.Bool `json:"completed"`
+	UserID      pgtype.Int8 `json:"user_id"`
 }
 
 func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, error) {
-	row := q.db.QueryRow(ctx, createTodo, arg.Title, arg.Description, arg.Completed)
+	row := q.db.QueryRow(ctx, createTodo,
+		arg.Title,
+		arg.Description,
+		arg.Completed,
+		arg.UserID,
+	)
 	var i Todo
 	err := row.Scan(
 		&i.ID,
@@ -33,6 +39,7 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, e
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
@@ -47,11 +54,11 @@ func (q *Queries) DeleteTodo(ctx context.Context, id int64) error {
 }
 
 const getCompletedTodos = `-- name: GetCompletedTodos :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos WHERE completed = true
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos WHERE completed = true AND user_id = $1
 `
 
-func (q *Queries) GetCompletedTodos(ctx context.Context) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getCompletedTodos)
+func (q *Queries) GetCompletedTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, getCompletedTodos, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +73,7 @@ func (q *Queries) GetCompletedTodos(ctx context.Context) ([]Todo, error) {
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -78,11 +86,11 @@ func (q *Queries) GetCompletedTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const getPendingTodos = `-- name: GetPendingTodos :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos WHERE completed = false
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos WHERE completed = false AND user_id = $1
 `
 
-func (q *Queries) GetPendingTodos(ctx context.Context) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getPendingTodos)
+func (q *Queries) GetPendingTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, getPendingTodos, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +105,7 @@ func (q *Queries) GetPendingTodos(ctx context.Context) ([]Todo, error) {
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -109,7 +118,7 @@ func (q *Queries) GetPendingTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const getTodoById = `-- name: GetTodoById :one
-SELECT id, title, description, completed, created_at, updated_at FROM todos WHERE id = $1
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos WHERE id = $1
 `
 
 func (q *Queries) GetTodoById(ctx context.Context, id int64) (Todo, error) {
@@ -122,18 +131,19 @@ func (q *Queries) GetTodoById(ctx context.Context, id int64) (Todo, error) {
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const getTodos = `-- name: GetTodos :many
-SELECT id, title, description, completed, created_at, updated_at
-FROM todos
+SELECT id, title, description, completed, created_at, updated_at, user_id
+FROM todos WHERE user_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getTodos)
+func (q *Queries) GetTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, getTodos, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -148,6 +158,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -160,17 +171,18 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const getTodosByDateRange = `-- name: GetTodosByDateRange :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos
-WHERE created_at BETWEEN $1 AND $2
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
+WHERE user_id = $1 AND created_at BETWEEN $2 AND $3
 `
 
 type GetTodosByDateRangeParams struct {
+	UserID      pgtype.Int8      `json:"user_id"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	CreatedAt_2 pgtype.Timestamp `json:"created_at_2"`
 }
 
 func (q *Queries) GetTodosByDateRange(ctx context.Context, arg GetTodosByDateRangeParams) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getTodosByDateRange, arg.CreatedAt, arg.CreatedAt_2)
+	rows, err := q.db.Query(ctx, getTodosByDateRange, arg.UserID, arg.CreatedAt, arg.CreatedAt_2)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +197,7 @@ func (q *Queries) GetTodosByDateRange(ctx context.Context, arg GetTodosByDateRan
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -200,7 +213,7 @@ const markTodoAsCompleted = `-- name: MarkTodoAsCompleted :one
 UPDATE todos 
 SET completed = true
 WHERE id = $1
-RETURNING id, title, description, completed, created_at, updated_at
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
 func (q *Queries) MarkTodoAsCompleted(ctx context.Context, id int64) (Todo, error) {
@@ -213,6 +226,7 @@ func (q *Queries) MarkTodoAsCompleted(ctx context.Context, id int64) (Todo, erro
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
@@ -221,7 +235,7 @@ const markTodoAsPending = `-- name: MarkTodoAsPending :one
 UPDATE todos
 SET completed = false
 WHERE id = $1
-RETURNING id, title, description, completed, created_at, updated_at
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
 func (q *Queries) MarkTodoAsPending(ctx context.Context, id int64) (Todo, error) {
@@ -234,17 +248,23 @@ func (q *Queries) MarkTodoAsPending(ctx context.Context, id int64) (Todo, error)
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const searchTodos = `-- name: SearchTodos :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos
-WHERE title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%'
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
+WHERE user_id = $1 AND (title ILIKE '%' || $2 || '%' OR description ILIKE '%' || $2 || '%')
 `
 
-func (q *Queries) SearchTodos(ctx context.Context, dollar_1 pgtype.Text) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, searchTodos, dollar_1)
+type SearchTodosParams struct {
+	UserID  pgtype.Int8 `json:"user_id"`
+	Column2 pgtype.Text `json:"column_2"`
+}
+
+func (q *Queries) SearchTodos(ctx context.Context, arg SearchTodosParams) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, searchTodos, arg.UserID, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -259,6 +279,7 @@ func (q *Queries) SearchTodos(ctx context.Context, dollar_1 pgtype.Text) ([]Todo
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -274,7 +295,7 @@ const updateTodo = `-- name: UpdateTodo :one
 UPDATE todos 
 SET title = $1, description = $2, completed = $3
 WHERE id = $4
-RETURNING id, title, description, completed, created_at, updated_at
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
 type UpdateTodoParams struct {
@@ -299,6 +320,7 @@ func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, e
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }

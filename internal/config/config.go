@@ -14,6 +14,7 @@ type Config struct {
 	DB                DBConfig
 	GoogleOauthConfig *oauth2.Config
 	Cookie            CookieConfig
+	JWTSecret         string
 }
 
 type CookieConfig struct {
@@ -68,6 +69,7 @@ func Load() (*Config, error) {
 			Domain:   getEnv("COOKIE_DOMAIN", "localhost"),
 			HttpOnly: getEnv("COOKIE_HTTPONLY", "true") == "true",
 		},
+		JWTSecret: getEnv("JWT_SECRET", "change-me-in-production"),
 	}, nil
 }
 

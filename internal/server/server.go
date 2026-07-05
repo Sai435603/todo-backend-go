@@ -33,7 +33,7 @@ func New(app *app.Application, h *handler.Handler, authHnd *handler.AuthHandler)
 	r.Use(custommw.RateLimiter(100, 200)) // 100 req/s per IP, burst of 200
 	r.Use(custommw.Timeout(30 * time.Second))
 
-	routes.Register(r, h)
+	routes.Register(r, h, app.Config.JWTSecret)
 	routes.RegisterAuthRoutes(r, authHnd)
 
 	srv := &http.Server{

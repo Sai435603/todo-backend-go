@@ -13,15 +13,18 @@ import (
 type Querier interface {
 	CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, error)
 	DeleteTodo(ctx context.Context, id int64) error
-	GetCompletedTodos(ctx context.Context) ([]Todo, error)
-	GetPendingTodos(ctx context.Context) ([]Todo, error)
+	GetCompletedTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error)
+	GetPendingTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error)
 	GetTodoById(ctx context.Context, id int64) (Todo, error)
-	GetTodos(ctx context.Context) ([]Todo, error)
+	GetTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error)
 	GetTodosByDateRange(ctx context.Context, arg GetTodosByDateRangeParams) ([]Todo, error)
+	GetUserByGoogleID(ctx context.Context, googleID string) (User, error)
+	GetUserByID(ctx context.Context, id int64) (User, error)
 	MarkTodoAsCompleted(ctx context.Context, id int64) (Todo, error)
 	MarkTodoAsPending(ctx context.Context, id int64) (Todo, error)
-	SearchTodos(ctx context.Context, dollar_1 pgtype.Text) ([]Todo, error)
+	SearchTodos(ctx context.Context, arg SearchTodosParams) ([]Todo, error)
 	UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error)
+	UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

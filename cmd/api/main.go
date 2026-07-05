@@ -26,7 +26,7 @@ func main() {
 	todoHnd := handler.New(application.Logger, todoSvc)
 	
 	// Initialize the AuthHandler
-	authHnd := handler.NewAuthHandler(application.Config)
+	authHnd := handler.NewAuthHandler(application.Config, application.DB)
 	srv := server.New(application, todoHnd, authHnd)
 
 	//graceful shutdown block
