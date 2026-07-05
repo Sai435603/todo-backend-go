@@ -7,13 +7,15 @@ import (
 )
 
 type Handler struct {
-	logger  *slog.Logger
-	service *service.TodoService
+	logger       *slog.Logger
+	service      *service.TodoService
+	AuthHandler  *AuthHandler
 }
 
-func New(logger *slog.Logger, service *service.TodoService) *Handler {
+func New(logger *slog.Logger, service *service.TodoService, authHandler *AuthHandler) *Handler {
 	return &Handler{
-		logger:  logger,
-		service: service,
+		logger:      logger,
+		service:     service,
+		AuthHandler: authHandler,
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Sai435603/todo-backend-go/internal/app"
+	"github.com/Sai435603/todo-backend-go/internal/auth"
 	"github.com/Sai435603/todo-backend-go/internal/handler"
 	"github.com/Sai435603/todo-backend-go/internal/repository"
 	"github.com/Sai435603/todo-backend-go/internal/server"
@@ -23,7 +24,9 @@ func main() {
 	defer application.DB.Close()
 	todoRepo := repository.New(application.DB)
 	todoSvc := service.New(todoRepo)
-	todoHnd := handler.New(application.Logger, todoSvc)
+	oauthSvc := auth.NewOAuthService(application.Config.GoogleOauthConfig, application.Config.Cookie)
+	authHnd := handler.NewAuthHandler(oauthSvc)
+	todoHnd := handler.New(application.Logger, todoSvc, authHnd)
 	srv := server.New(application, todoHnd)
 
 	//graceful shutdown block

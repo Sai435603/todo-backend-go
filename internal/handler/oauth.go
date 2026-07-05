@@ -4,27 +4,39 @@ import (
 	"net/http"
 
 	"github.com/Sai435603/todo-backend-go/internal/auth"
-	"github.com/Sai435603/todo-backend-go/internal/config"
 	"github.com/Sai435603/todo-backend-go/internal/validator"
 )
 
+// AuthHandler handles OAuth-related HTTP requests.
+// It depends on OAuthService, not on config — handlers should never
+// know about application configuration details.
 type AuthHandler struct {
-	Config *config.Config
+	oauth *auth.OAuthService
 }
 
+// NewAuthHandler creates an AuthHandler with the given OAuthService.
+func NewAuthHandler(oauth *auth.OAuthService) *AuthHandler {
+	return &AuthHandler{oauth: oauth}
+}
+
+// HandleOAuthLogin initiates the Google OAuth flow by redirecting
+// the user to Google's consent screen with a CSRF state token.
 func (h *AuthHandler) HandleOAuthLogin(w http.ResponseWriter, r *http.Request) {
-	state, err := auth.GenerateState(w, h.Config.Cookie)
+	state, err := h.oauth.GenerateState(w)
 	if err != nil {
 		http.Error(w, "Failed to generate state", http.StatusInternalServerError)
 		return
 	}
 
-	url := h.Config.GoogleOauthConfig.AuthCodeURL(state)
+	url := h.oauth.AuthCodeURL(state)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
+// OAuthCallbackHandler handles the OAuth callback from Google.
+// It validates the state parameter to prevent CSRF attacks, then
+// clears the state cookie.
 func (h *AuthHandler) OAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	cookieState, err := auth.GetStateCookie(r, h.Config.Cookie.Name)
+	cookieState, err := h.oauth.GetStateCookie(r)
 	if err != nil {
 		http.Error(w, "State cookie missing", http.StatusBadRequest)
 		return
@@ -36,5 +48,5 @@ func (h *AuthHandler) OAuthCallbackHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid state parameter", http.StatusForbidden)
 		return
 	}
-	auth.ClearStateCookie(w, h.Config.Cookie)
+	h.oauth.ClearStateCookie(w)
 }

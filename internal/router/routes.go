@@ -14,6 +14,7 @@ func Register(r chi.Router, h *handler.Handler) {
 	r.Route("/api/v1", func(r chi.Router) {
 		registerHealthRoutes(r, h)
 		registerTodoRoutes(r, h)
+		registerAuthRoutes(r, h.AuthHandler)
 	})
 
 	// Serve static files from the "static" directory
