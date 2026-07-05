@@ -15,4 +15,15 @@ type Todo struct {
 	Completed   pgtype.Bool      `json:"completed"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+	UserID      pgtype.Int8      `json:"user_id"`
+}
+
+type User struct {
+	ID        int64            `json:"id"`
+	GoogleID  string           `json:"google_id"`
+	Email     string           `json:"email"`
+	Name      string           `json:"name"`
+	AvatarUrl pgtype.Text      `json:"avatar_url"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }

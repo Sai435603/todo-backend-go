@@ -950,6 +950,163 @@ body {
 .todo-item:nth-child(10) { animation-delay: 0.30s; }
 
 /* =============================================
+   LOGIN SCREEN
+   ============================================= */
+.login-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary);
+    animation: fadeIn 0.4s ease-out;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 16px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-secondary);
+}
+
+.login-terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #161b22;
+    border-bottom: 1px solid var(--border-default);
+}
+
+.login-body {
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.login-ascii {
+    font-size: 0.5rem;
+    line-height: 1.3;
+    color: var(--green);
+    text-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+    text-align: center;
+    white-space: pre;
+    overflow-x: auto;
+    max-width: 100%;
+    margin: 0;
+    font-family: var(--font);
+}
+
+.login-prompt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.login-prompt-symbol {
+    color: var(--green);
+    font-weight: 700;
+}
+
+.login-typing {
+    color: var(--cyan);
+}
+
+.login-cursor {
+    color: var(--green);
+    animation: blink-cursor 1.2s step-end infinite;
+    font-weight: 700;
+}
+
+.login-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.google-login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 28px;
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid var(--green);
+    font-family: var(--font);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-base);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.google-login-btn:hover {
+    background: rgba(57, 255, 20, 0.18);
+    text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.1);
+}
+
+.google-login-btn:active {
+    background: rgba(57, 255, 20, 0.25);
+}
+
+.login-footer {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+}
+
+/* =============================================
+   USER PROFILE (TITLEBAR)
+   ============================================= */
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border-default);
+    object-fit: cover;
+}
+
+.user-name {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.logout-btn {
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-tertiary);
+    font-family: var(--font);
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 3px 8px;
+    transition: var(--transition-fast);
+}
+
+.logout-btn:hover {
+    color: var(--red);
+    border-color: var(--red);
+    text-shadow: 0 0 6px rgba(255, 85, 85, 0.3);
+}
+
+/* =============================================
    RESPONSIVE
    ============================================= */
 @media (max-width: 600px) {

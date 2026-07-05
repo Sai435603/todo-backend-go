@@ -6,15 +6,25 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Sai435603/todo-backend-go/internal/auth"
 	"github.com/Sai435603/todo-backend-go/internal/handler"
+	custommw "github.com/Sai435603/todo-backend-go/internal/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
-func Register(r chi.Router, h *handler.Handler) {
+func Register(r chi.Router, h *handler.Handler, jwtSvc *auth.JWTService) {
 	r.Route("/api/v1", func(r chi.Router) {
 		registerHealthRoutes(r, h)
-		registerTodoRoutes(r, h)
+
+		// Public — no auth required
 		registerAuthRoutes(r, h.AuthHandler)
+
+		// Protected — JWT required
+		r.Group(func(r chi.Router) {
+			r.Use(custommw.Auth(jwtSvc))
+			registerTodoRoutes(r, h)
+			r.Get("/auth/me", h.AuthHandler.HandleGetMe)
+		})
 	})
 
 	// Serve static files from the "static" directory

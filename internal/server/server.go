@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Sai435603/todo-backend-go/internal/app"
+	"github.com/Sai435603/todo-backend-go/internal/auth"
 	"github.com/Sai435603/todo-backend-go/internal/handler"
 	custommw "github.com/Sai435603/todo-backend-go/internal/middleware"
 	routes "github.com/Sai435603/todo-backend-go/internal/router"
@@ -20,7 +21,7 @@ type Server struct {
 	server *http.Server
 }
 
-func New(app *app.Application, h *handler.Handler) *Server {
+func New(app *app.Application, h *handler.Handler, jwtSvc *auth.JWTService) *Server {
 	r := chi.NewRouter()
 
 	// --- Chi built-in middlewares ---
@@ -36,7 +37,7 @@ func New(app *app.Application, h *handler.Handler) *Server {
 	r.Use(custommw.RateLimiter(100, 200)) // 100 req/s per IP, burst of 200
 	r.Use(custommw.Timeout(30 * time.Second))
 
-	routes.Register(r, h)
+	routes.Register(r, h, jwtSvc)
 
 	srv := &http.Server{
 		Addr:         ":" + app.Config.App.Port,

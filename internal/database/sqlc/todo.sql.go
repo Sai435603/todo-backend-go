@@ -12,19 +12,25 @@ import (
 )
 
 const createTodo = `-- name: CreateTodo :one
-INSERT INTO todos (title, description, completed)
-VALUES ($1, $2, $3)
-RETURNING id, title, description, completed, created_at, updated_at
+INSERT INTO todos (title, description, completed, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
 type CreateTodoParams struct {
 	Title       string      `json:"title"`
 	Description pgtype.Text `json:"description"`
 	Completed   pgtype.Bool `json:"completed"`
+	UserID      pgtype.Int8 `json:"user_id"`
 }
 
 func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, error) {
-	row := q.db.QueryRow(ctx, createTodo, arg.Title, arg.Description, arg.Completed)
+	row := q.db.QueryRow(ctx, createTodo,
+		arg.Title,
+		arg.Description,
+		arg.Completed,
+		arg.UserID,
+	)
 	var i Todo
 	err := row.Scan(
 		&i.ID,
@@ -33,25 +39,33 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, e
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const deleteTodo = `-- name: DeleteTodo :exec
-DELETE FROM todos WHERE id = $1
+DELETE FROM todos
+WHERE id = $1 AND user_id = $2
 `
 
-func (q *Queries) DeleteTodo(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteTodo, id)
+type DeleteTodoParams struct {
+	ID     int64       `json:"id"`
+	UserID pgtype.Int8 `json:"user_id"`
+}
+
+func (q *Queries) DeleteTodo(ctx context.Context, arg DeleteTodoParams) error {
+	_, err := q.db.Exec(ctx, deleteTodo, arg.ID, arg.UserID)
 	return err
 }
 
 const getCompletedTodos = `-- name: GetCompletedTodos :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos WHERE completed = true
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
+WHERE completed = true AND user_id = $1
 `
 
-func (q *Queries) GetCompletedTodos(ctx context.Context) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getCompletedTodos)
+func (q *Queries) GetCompletedTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, getCompletedTodos, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +80,7 @@ func (q *Queries) GetCompletedTodos(ctx context.Context) ([]Todo, error) {
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -78,11 +93,12 @@ func (q *Queries) GetCompletedTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const getPendingTodos = `-- name: GetPendingTodos :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos WHERE completed = false
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
+WHERE completed = false AND user_id = $1
 `
 
-func (q *Queries) GetPendingTodos(ctx context.Context) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getPendingTodos)
+func (q *Queries) GetPendingTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, getPendingTodos, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +113,7 @@ func (q *Queries) GetPendingTodos(ctx context.Context) ([]Todo, error) {
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -109,11 +126,17 @@ func (q *Queries) GetPendingTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const getTodoById = `-- name: GetTodoById :one
-SELECT id, title, description, completed, created_at, updated_at FROM todos WHERE id = $1
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
+WHERE id = $1 AND user_id = $2
 `
 
-func (q *Queries) GetTodoById(ctx context.Context, id int64) (Todo, error) {
-	row := q.db.QueryRow(ctx, getTodoById, id)
+type GetTodoByIdParams struct {
+	ID     int64       `json:"id"`
+	UserID pgtype.Int8 `json:"user_id"`
+}
+
+func (q *Queries) GetTodoById(ctx context.Context, arg GetTodoByIdParams) (Todo, error) {
+	row := q.db.QueryRow(ctx, getTodoById, arg.ID, arg.UserID)
 	var i Todo
 	err := row.Scan(
 		&i.ID,
@@ -122,18 +145,19 @@ func (q *Queries) GetTodoById(ctx context.Context, id int64) (Todo, error) {
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const getTodos = `-- name: GetTodos :many
-SELECT id, title, description, completed, created_at, updated_at
-FROM todos
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
+WHERE user_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getTodos)
+func (q *Queries) GetTodos(ctx context.Context, userID pgtype.Int8) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, getTodos, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -148,6 +172,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -160,17 +185,19 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const getTodosByDateRange = `-- name: GetTodosByDateRange :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
 WHERE created_at BETWEEN $1 AND $2
+  AND user_id = $3
 `
 
 type GetTodosByDateRangeParams struct {
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	CreatedAt_2 pgtype.Timestamp `json:"created_at_2"`
+	UserID      pgtype.Int8      `json:"user_id"`
 }
 
 func (q *Queries) GetTodosByDateRange(ctx context.Context, arg GetTodosByDateRangeParams) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, getTodosByDateRange, arg.CreatedAt, arg.CreatedAt_2)
+	rows, err := q.db.Query(ctx, getTodosByDateRange, arg.CreatedAt, arg.CreatedAt_2, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +212,7 @@ func (q *Queries) GetTodosByDateRange(ctx context.Context, arg GetTodosByDateRan
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -197,14 +225,19 @@ func (q *Queries) GetTodosByDateRange(ctx context.Context, arg GetTodosByDateRan
 }
 
 const markTodoAsCompleted = `-- name: MarkTodoAsCompleted :one
-UPDATE todos 
+UPDATE todos
 SET completed = true
-WHERE id = $1
-RETURNING id, title, description, completed, created_at, updated_at
+WHERE id = $1 AND user_id = $2
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
-func (q *Queries) MarkTodoAsCompleted(ctx context.Context, id int64) (Todo, error) {
-	row := q.db.QueryRow(ctx, markTodoAsCompleted, id)
+type MarkTodoAsCompletedParams struct {
+	ID     int64       `json:"id"`
+	UserID pgtype.Int8 `json:"user_id"`
+}
+
+func (q *Queries) MarkTodoAsCompleted(ctx context.Context, arg MarkTodoAsCompletedParams) (Todo, error) {
+	row := q.db.QueryRow(ctx, markTodoAsCompleted, arg.ID, arg.UserID)
 	var i Todo
 	err := row.Scan(
 		&i.ID,
@@ -213,6 +246,7 @@ func (q *Queries) MarkTodoAsCompleted(ctx context.Context, id int64) (Todo, erro
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
@@ -220,12 +254,17 @@ func (q *Queries) MarkTodoAsCompleted(ctx context.Context, id int64) (Todo, erro
 const markTodoAsPending = `-- name: MarkTodoAsPending :one
 UPDATE todos
 SET completed = false
-WHERE id = $1
-RETURNING id, title, description, completed, created_at, updated_at
+WHERE id = $1 AND user_id = $2
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
-func (q *Queries) MarkTodoAsPending(ctx context.Context, id int64) (Todo, error) {
-	row := q.db.QueryRow(ctx, markTodoAsPending, id)
+type MarkTodoAsPendingParams struct {
+	ID     int64       `json:"id"`
+	UserID pgtype.Int8 `json:"user_id"`
+}
+
+func (q *Queries) MarkTodoAsPending(ctx context.Context, arg MarkTodoAsPendingParams) (Todo, error) {
+	row := q.db.QueryRow(ctx, markTodoAsPending, arg.ID, arg.UserID)
 	var i Todo
 	err := row.Scan(
 		&i.ID,
@@ -234,17 +273,24 @@ func (q *Queries) MarkTodoAsPending(ctx context.Context, id int64) (Todo, error)
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const searchTodos = `-- name: SearchTodos :many
-SELECT id, title, description, completed, created_at, updated_at FROM todos
-WHERE title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%'
+SELECT id, title, description, completed, created_at, updated_at, user_id FROM todos
+WHERE (title ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%')
+  AND user_id = $2
 `
 
-func (q *Queries) SearchTodos(ctx context.Context, dollar_1 pgtype.Text) ([]Todo, error) {
-	rows, err := q.db.Query(ctx, searchTodos, dollar_1)
+type SearchTodosParams struct {
+	Column1 pgtype.Text `json:"column_1"`
+	UserID  pgtype.Int8 `json:"user_id"`
+}
+
+func (q *Queries) SearchTodos(ctx context.Context, arg SearchTodosParams) ([]Todo, error) {
+	rows, err := q.db.Query(ctx, searchTodos, arg.Column1, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -259,6 +305,7 @@ func (q *Queries) SearchTodos(ctx context.Context, dollar_1 pgtype.Text) ([]Todo
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -271,10 +318,10 @@ func (q *Queries) SearchTodos(ctx context.Context, dollar_1 pgtype.Text) ([]Todo
 }
 
 const updateTodo = `-- name: UpdateTodo :one
-UPDATE todos 
+UPDATE todos
 SET title = $1, description = $2, completed = $3
-WHERE id = $4
-RETURNING id, title, description, completed, created_at, updated_at
+WHERE id = $4 AND user_id = $5
+RETURNING id, title, description, completed, created_at, updated_at, user_id
 `
 
 type UpdateTodoParams struct {
@@ -282,6 +329,7 @@ type UpdateTodoParams struct {
 	Description pgtype.Text `json:"description"`
 	Completed   pgtype.Bool `json:"completed"`
 	ID          int64       `json:"id"`
+	UserID      pgtype.Int8 `json:"user_id"`
 }
 
 func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error) {
@@ -290,6 +338,7 @@ func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, e
 		arg.Description,
 		arg.Completed,
 		arg.ID,
+		arg.UserID,
 	)
 	var i Todo
 	err := row.Scan(
@@ -299,6 +348,7 @@ func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, e
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }

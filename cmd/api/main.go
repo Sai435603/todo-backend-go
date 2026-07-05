@@ -22,12 +22,25 @@ func main() {
 		log.Fatal(err)
 	}
 	defer application.DB.Close()
+
+	// Repositories
 	todoRepo := repository.New(application.DB)
+	userRepo := repository.NewUserRepository(application.DB)
+
+	// Services
 	todoSvc := service.New(todoRepo)
+	userSvc := service.NewUserService(userRepo)
+
+	// Auth
 	oauthSvc := auth.NewOAuthService(application.Config.GoogleOauthConfig, application.Config.Cookie)
-	authHnd := handler.NewAuthHandler(oauthSvc)
-	todoHnd := handler.New(application.Logger, todoSvc, authHnd)
-	srv := server.New(application, todoHnd)
+	jwtSvc := auth.NewJWTService(application.Config.JWTSecret, 24*time.Hour)
+
+	// Handlers
+	authHnd := handler.NewAuthHandler(oauthSvc, userSvc, jwtSvc)
+	todoHnd := handler.New(application.Logger, todoSvc, userSvc, jwtSvc, authHnd)
+
+	// Server
+	srv := server.New(application, todoHnd, jwtSvc)
 
 	//graceful shutdown block
 	{

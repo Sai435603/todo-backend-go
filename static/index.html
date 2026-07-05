@@ -4,19 +4,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>todo</title>
-    <meta name="description" content="A terminal-style todo application built with Go">
+    <title>taskflow — terminal todo</title>
+    <meta name="description" content="A terminal-style todo application with Google OAuth">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Scanline overlay -->
     <div id="scanline-overlay"></div>
 
-    <div class="app-container">
-        <!-- Terminal Title Bar -->
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-container">
+            <div class="login-terminal-bar">
+                <div class="titlebar-dots">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                </div>
+                <span class="titlebar-text">auth@localhost:~</span>
+            </div>
+            <div class="login-body">
+                <pre class="login-ascii">
+ _____ _    ____  _  _______ _     _____        __
+|_   _/ \  / ___|| |/ /  ___| |   / _ \ \      / /
+  | |/ _ \ \___ \| ' /| |_  | |  | | | \ \ /\ / /
+  | / ___ \ ___) | . \|  _| | |__| |_| |\ V  V /
+  |_/_/  \_\____/|_|\_\_|   |_____\___/  \_/\_/
+                </pre>
+                <div class="login-prompt">
+                    <span class="login-prompt-symbol">$</span>
+                    <span class="login-typing">authenticate --provider google</span>
+                    <span class="login-cursor">_</span>
+                </div>
+                <p class="login-subtitle">// sign in to access your tasks</p>
+                <button id="google-login-btn" class="google-login-btn" onclick="startLogin()">
+                    <span>Sign in with Google</span>
+                </button>
+                <p class="login-footer">// secured with OAuth 2.0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP (hidden until auth) -->
+    <div id="app-main" class="app-container hidden">
         <div class="terminal-titlebar">
             <div class="titlebar-dots">
                 <span class="dot dot-red"></span>
@@ -25,59 +57,36 @@
             </div>
             <span class="titlebar-text">todo@localhost:~</span>
             <div class="titlebar-spacer"></div>
+            <div id="user-profile" class="user-profile">
+                <img id="user-avatar" class="user-avatar" src="" alt="">
+                <span id="user-name" class="user-name"></span>
+                <button id="logout-btn" class="logout-btn" onclick="logout()">[exit]</button>
+            </div>
         </div>
 
-        <!-- Header -->
         <header class="app-header">
             <div class="logo-section">
                 <h1><span class="prompt">$</span> taskflow</h1>
             </div>
             <div class="header-stats">
-                <div class="stat" id="stat-total">
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Total</span>
-                </div>
-                <div class="stat" id="stat-pending">
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Pending</span>
-                </div>
-                <div class="stat" id="stat-completed">
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Done</span>
-                </div>
+                <div class="stat" id="stat-total"><span class="stat-number">0</span><span class="stat-label">Total</span></div>
+                <div class="stat" id="stat-pending"><span class="stat-number">0</span><span class="stat-label">Pending</span></div>
+                <div class="stat" id="stat-completed"><span class="stat-number">0</span><span class="stat-label">Done</span></div>
             </div>
         </header>
 
-        <!-- Add Todo Section -->
         <section class="add-section">
             <form id="add-todo-form" class="add-form">
                 <div class="input-group">
                     <div class="input-row">
-                        <input 
-                            type="text" 
-                            id="todo-title" 
-                            placeholder="> enter task..." 
-                            autocomplete="off"
-                            required
-                        >
-                        <button type="submit" id="add-btn" class="btn-add">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            <span>Add</span>
-                        </button>
+                        <input type="text" id="todo-title" placeholder="> enter task..." autocomplete="off" required>
+                        <button type="submit" id="add-btn" class="btn-add"><span>Add</span></button>
                     </div>
-                    <textarea 
-                        id="todo-description" 
-                        placeholder="# description (optional)"
-                        rows="1"
-                    ></textarea>
+                    <textarea id="todo-description" placeholder="# description (optional)" rows="1"></textarea>
                 </div>
             </form>
         </section>
 
-        <!-- Toolbar -->
         <section class="toolbar">
             <div class="filter-tabs">
                 <button class="filter-btn active" data-filter="all">All</button>
@@ -85,28 +94,16 @@
                 <button class="filter-btn" data-filter="completed">Completed</button>
             </div>
             <div class="search-box">
-                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input type="text" id="search-input" placeholder="grep ...">
             </div>
         </section>
 
-        <!-- Todo List -->
         <section class="todo-list-section">
-            <div id="todo-list" class="todo-list">
-                <!-- Todos rendered by JS -->
-            </div>
+            <div id="todo-list" class="todo-list"></div>
             <div id="empty-state" class="empty-state hidden">
                 <div class="empty-icon">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10 9 9 9 8 9"/>
-                    </svg>
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 </div>
                 <p class="empty-title">// no tasks found</p>
                 <p class="empty-subtitle">run <span class="cmd-highlight">> add</span> to create your first entry</p>
@@ -124,23 +121,14 @@
             <div class="modal-header">
                 <h2>Edit Task</h2>
                 <button id="modal-close" class="modal-close-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             <form id="edit-form" class="modal-body">
                 <input type="hidden" id="edit-id">
                 <input type="hidden" id="edit-completed">
-                <div class="form-field">
-                    <label for="edit-title">Title</label>
-                    <input type="text" id="edit-title" required>
-                </div>
-                <div class="form-field">
-                    <label for="edit-description">Description</label>
-                    <textarea id="edit-description" rows="3"></textarea>
-                </div>
+                <div class="form-field"><label for="edit-title">Title</label><input type="text" id="edit-title" required></div>
+                <div class="form-field"><label for="edit-description">Description</label><textarea id="edit-description" rows="3"></textarea></div>
                 <div class="modal-actions">
                     <button type="button" id="modal-cancel" class="btn-secondary">Cancel</button>
                     <button type="submit" class="btn-primary">Save Changes</button>
@@ -149,166 +137,7 @@
         </div>
     </div>
 
-    <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
-
-    <script src="app.js"></script>
-</body>
-</html>
-<!-- UI is made with AI you can edit -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>todo — terminal</title>
-    <meta name="description" content="A terminal-style todo application built with Go">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <!-- Scanline overlay -->
-    <div id="scanline-overlay"></div>
-
-    <div class="app-container">
-        <!-- Terminal Title Bar -->
-        <div class="terminal-titlebar">
-            <div class="titlebar-dots">
-                <span class="dot dot-red"></span>
-                <span class="dot dot-yellow"></span>
-                <span class="dot dot-green"></span>
-            </div>
-            <span class="titlebar-text">todo@localhost:~</span>
-            <div class="titlebar-spacer"></div>
-        </div>
-
-        <!-- Header -->
-        <header class="app-header">
-            <div class="logo-section">
-                <h1><span class="prompt">$</span> taskflow</h1>
-            </div>
-            <div class="header-stats">
-                <div class="stat" id="stat-total">
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Total</span>
-                </div>
-                <div class="stat" id="stat-pending">
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Pending</span>
-                </div>
-                <div class="stat" id="stat-completed">
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">Done</span>
-                </div>
-            </div>
-        </header>
-
-        <!-- Add Todo Section -->
-        <section class="add-section">
-            <form id="add-todo-form" class="add-form">
-                <div class="input-group">
-                    <div class="input-row">
-                        <input 
-                            type="text" 
-                            id="todo-title" 
-                            placeholder="> enter task..." 
-                            autocomplete="off"
-                            required
-                        >
-                        <button type="submit" id="add-btn" class="btn-add">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            <span>Add</span>
-                        </button>
-                    </div>
-                    <textarea 
-                        id="todo-description" 
-                        placeholder="# description (optional)"
-                        rows="1"
-                    ></textarea>
-                </div>
-            </form>
-        </section>
-
-        <!-- Toolbar -->
-        <section class="toolbar">
-            <div class="filter-tabs">
-                <button class="filter-btn active" data-filter="all">All</button>
-                <button class="filter-btn" data-filter="pending">Pending</button>
-                <button class="filter-btn" data-filter="completed">Completed</button>
-            </div>
-            <div class="search-box">
-                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input type="text" id="search-input" placeholder="grep ...">
-            </div>
-        </section>
-
-        <!-- Todo List -->
-        <section class="todo-list-section">
-            <div id="todo-list" class="todo-list">
-                <!-- Todos rendered by JS -->
-            </div>
-            <div id="empty-state" class="empty-state hidden">
-                <div class="empty-icon">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10 9 9 9 8 9"/>
-                    </svg>
-                </div>
-                <p class="empty-title">// no tasks found</p>
-                <p class="empty-subtitle">run <span class="cmd-highlight">> add</span> to create your first entry</p>
-            </div>
-            <div id="loading-state" class="loading-state">
-                <div class="spinner"></div>
-                <p>fetching tasks...</p>
-            </div>
-        </section>
-    </div>
-
-    <!-- Edit Modal -->
-    <div id="edit-modal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Edit Task</h2>
-                <button id="modal-close" class="modal-close-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <form id="edit-form" class="modal-body">
-                <input type="hidden" id="edit-id">
-                <input type="hidden" id="edit-completed">
-                <div class="form-field">
-                    <label for="edit-title">Title</label>
-                    <input type="text" id="edit-title" required>
-                </div>
-                <div class="form-field">
-                    <label for="edit-description">Description</label>
-                    <textarea id="edit-description" rows="3"></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" id="modal-cancel" class="btn-secondary">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"></div>
-
     <script src="app.js"></script>
 </body>
 </html>
