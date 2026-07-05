@@ -1,0 +1,1 @@
+alter table todos drop column if exists user_id;
