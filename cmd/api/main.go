@@ -24,7 +24,10 @@ func main() {
 	todoRepo := repository.New(application.DB)
 	todoSvc := service.New(todoRepo)
 	todoHnd := handler.New(application.Logger, todoSvc)
-	srv := server.New(application, todoHnd)
+	
+	// Initialize the AuthHandler
+	authHnd := handler.NewAuthHandler(application.Config)
+	srv := server.New(application, todoHnd, authHnd)
 
 	//graceful shutdown block
 	{

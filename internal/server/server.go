@@ -20,15 +20,12 @@ type Server struct {
 	server *http.Server
 }
 
-func New(app *app.Application, h *handler.Handler) *Server {
+func New(app *app.Application, h *handler.Handler, authHnd *handler.AuthHandler) *Server {
 	r := chi.NewRouter()
-
-	// --- Chi built-in middlewares ---
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 
-	// --- Custom middlewares ---
 	r.Use(custommw.RequestLogger(app.Logger))
 	r.Use(custommw.CORS("*"))
 	r.Use(custommw.SecurityHeaders)
@@ -37,6 +34,7 @@ func New(app *app.Application, h *handler.Handler) *Server {
 	r.Use(custommw.Timeout(30 * time.Second))
 
 	routes.Register(r, h)
+	routes.RegisterAuthRoutes(r, authHnd)
 
 	srv := &http.Server{
 		Addr:         ":" + app.Config.App.Port,

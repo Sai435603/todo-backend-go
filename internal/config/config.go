@@ -71,7 +71,7 @@ func Load() (*Config, error) {
 	}, nil
 }
 
-// key and the fallback value if the key is not found in the env variables
+// key and the fallback value, if the key is not found in the env variables
 func getEnv(key, defaultValue string) string {
 	value := defaultValue
 	if envValue, exists := os.LookupEnv(key); exists {

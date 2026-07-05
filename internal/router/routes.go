@@ -36,3 +36,9 @@ func Register(r chi.Router, h *handler.Handler) {
 		fileServer.ServeHTTP(w, r)
 	})
 }
+
+func RegisterAuthRoutes(r chi.Router, h *handler.AuthHandler) {
+	r.Route("/auth", func(r chi.Router) {
+		registerAuthRoutes(r, h)
+	})
+}

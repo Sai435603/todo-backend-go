@@ -21,7 +21,7 @@ func GenerateState(w http.ResponseWriter, cfg config.CookieConfig) (string, erro
 		Value:    state,
 		MaxAge:   int((10 * time.Minute).Seconds()),
 		Secure:   cfg.Secure,
-		Domain:   cfg.Domain, // Added Domain mapping for completeness
+		Domain:   cfg.Domain, 
 		HttpOnly: cfg.HttpOnly,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
